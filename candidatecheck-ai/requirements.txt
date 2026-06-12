@@ -1,0 +1,7 @@
+streamlit
+openai>=1.30,<2
+python-dotenv
+pydantic
+pymupdf
+python-docx
+pandas
