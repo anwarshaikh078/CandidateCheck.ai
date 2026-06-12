@@ -72,6 +72,10 @@ class CandidateReport(BaseModel):
     risk_level: RiskLevel
     recommended_next_step: RecommendedNextStep
     summary: str = Field(..., min_length=1)
+    profile_assets_found: List[str] = Field(default_factory=list)
+    candidate_evidence_snapshot: List[str] = Field(default_factory=list)
+    key_claims_to_validate: List[str] = Field(default_factory=list)
+    client_submission_brief: List[str] = Field(default_factory=list)
     top_recruiter_actions: List[str] = Field(default_factory=list)
     red_flags: List[RedFlag] = Field(default_factory=list)
     missing_information: List[str] = Field(default_factory=list)

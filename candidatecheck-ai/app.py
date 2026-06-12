@@ -13,7 +13,7 @@ from services.ai_analyzer import (
     analyze_candidate,
 )
 from services.database import fetch_reports, init_db, save_report
-from services.extract_text import ResumeExtractionError, extract_resume_text
+from services.extract_text import ResumeExtractionError, extract_resume_links, extract_resume_text
 
 
 APP_TITLE = "CandidateCheck AI"
@@ -88,7 +88,8 @@ def render_analyze_page() -> None:
         st.error(str(exc))
         return
 
-    resume_meta = build_resume_metadata(uploaded_file.name, resume_text)
+    extracted_links = extract_resume_links(uploaded_file)
+    resume_meta = build_resume_metadata(uploaded_file.name, resume_text, extracted_links)
 
     if len(resume_text.split()) < 120:
         st.warning(
@@ -107,6 +108,7 @@ def render_analyze_page() -> None:
                 linkedin_text=linkedin_text,
                 github_url=github_url,
                 recruiter_notes=recruiter_notes,
+                extracted_links=extracted_links,
             )
             report_id = save_report(
                 candidate_name=candidate_name,
@@ -158,6 +160,7 @@ def render_report(
     )
 
     with overview_tab:
+        render_recruiter_brief(report)
         st.markdown("#### Top Recruiter Actions")
         render_bullet_list(report.top_recruiter_actions)
 
@@ -222,6 +225,20 @@ def render_questions(report: CandidateReport) -> None:
                 st.caption(f"Related signal: {item['related_signal']}")
                 st.write(f"Purpose: {item['purpose']}")
                 st.write(f"Expected good answer: {item['expected_good_answer']}")
+
+
+def render_recruiter_brief(report: CandidateReport) -> None:
+    brief_sections = [
+        ("Profile Assets Found", report.profile_assets_found),
+        ("Evidence Snapshot", report.candidate_evidence_snapshot),
+        ("Claims To Validate", report.key_claims_to_validate),
+        ("Client Submission Brief", report.client_submission_brief),
+    ]
+    cols = st.columns(2)
+    for index, (title, items) in enumerate(brief_sections):
+        with cols[index % 2]:
+            st.markdown(f"#### {title}")
+            render_bullet_list(items)
 
 
 def render_past_reports_page() -> None:
@@ -296,13 +313,14 @@ def render_bullet_list(items: Iterable[str]) -> None:
         st.markdown(f"- {item}")
 
 
-def build_resume_metadata(filename: str, resume_text: str) -> dict:
+def build_resume_metadata(filename: str, resume_text: str, extracted_links: list[str]) -> dict:
     cleaned_text = " ".join(resume_text.split())
     return {
         "filename": filename,
         "word_count": len(cleaned_text.split()),
         "fingerprint": hashlib.sha256(cleaned_text.encode("utf-8")).hexdigest()[:12],
         "preview": cleaned_text[:260],
+        "links": extracted_links,
     }
 
 
@@ -311,6 +329,12 @@ def render_resume_metadata(resume_meta: dict) -> None:
     file_col.caption(f"Analyzed file: {resume_meta['filename']}")
     words_col.caption(f"Words: {resume_meta['word_count']}")
     hash_col.caption(f"Text ID: {resume_meta['fingerprint']}")
+    links = resume_meta.get("links", [])
+    if links:
+        st.caption(f"Embedded links found: {len(links)}")
+        with st.expander("Embedded resume links"):
+            for link in links:
+                st.markdown(f"- {link}")
     with st.expander("Resume text preview"):
         st.write(resume_meta["preview"] or "No preview available.")
 

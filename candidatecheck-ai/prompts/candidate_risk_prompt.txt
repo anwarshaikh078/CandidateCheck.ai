@@ -8,6 +8,15 @@ Candidate-specific requirement:
 - The summary, top recruiter actions, risk signals, and verification questions must reference concrete details from the supplied resume when available, such as candidate projects, employers, tools, dates, certifications, metrics, systems, domains, or claimed responsibilities.
 - If the extracted resume text is thin or unreadable, say that the available text is limited and focus the report on what must be collected next.
 - Do not reuse boilerplate explanations across different candidates unless the same evidence appears in the supplied resume text.
+- Use embedded_resume_links as real resume evidence. PDF and DOCX resumes often store LinkedIn, GitHub, and portfolio URLs as hidden hyperlink targets while the visible text only says "LinkedIn", "GitHub", or "Portfolio".
+- Never say GitHub, LinkedIn, or portfolio links are absent if embedded_resume_links contains relevant URLs.
+- In profile_assets_found, list the actual profile or portfolio assets discovered from visible resume text, manually entered fields, and embedded_resume_links.
+
+Product-owner output standard:
+- The report must feel useful enough that a recruiter would pay for it.
+- Give a recruiter a practical verification packet, not just a risk label.
+- Identify what evidence is already strong, what is missing, what to ask, and what can be safely used in a client submission.
+- Prefer concrete observations tied to the resume over generic warnings.
 
 Decision boundary:
 - You are not deciding whether the candidate should be hired.
@@ -62,6 +71,8 @@ Analysis checklist:
 - Missing GitHub, portfolio, work sample, or technical proof when relevant.
 - Role-specific credibility for the target role.
 - Whether the resume gives enough evidence for recruiter submission.
+- Profile assets available from embedded links, such as LinkedIn, GitHub, portfolio, personal website, publications, or project demos.
+- Client-submission proof points: tools, platforms, domains, project outcomes, certifications, and examples the recruiter can cite after validation.
 
 Date and timeline interpretation rules:
 - Use the supplied analysis_current_date as today's date. Do not rely on your training-time date.
@@ -106,6 +117,10 @@ Required JSON schema:
   "risk_level": "Low",
   "recommended_next_step": "Proceed",
   "summary": "string",
+  "profile_assets_found": ["string"],
+  "candidate_evidence_snapshot": ["string"],
+  "key_claims_to_validate": ["string"],
+  "client_submission_brief": ["string"],
   "top_recruiter_actions": ["string"],
   "red_flags": [
     {
@@ -140,5 +155,21 @@ Allowed enum values:
 
 Top recruiter actions:
 Give 3 to 5 specific next actions the recruiter should take.
+
+profile_assets_found:
+- Include discovered LinkedIn, GitHub, portfolio, personal site, or project links from embedded_resume_links and visible text.
+- If a URL appears to be GitHub or portfolio evidence, say it was found and recommend reviewing it. Do not mark it missing.
+
+candidate_evidence_snapshot:
+- Give 4 to 6 concrete resume-specific proof points the recruiter can understand quickly.
+- Include projects, tools, cloud platforms, certifications, domains, metrics, and employers when available.
+
+key_claims_to_validate:
+- Give 4 to 6 specific claims that should be verified in screening.
+- Tie each item to a role, project, tool, date range, metric, or ownership claim.
+
+client_submission_brief:
+- Give 3 to 5 concise bullets that could become client submission notes after recruiter validation.
+- Keep them factual and careful.
 
 If information is missing, say there is not enough evidence instead of assuming.

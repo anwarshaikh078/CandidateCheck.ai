@@ -2,7 +2,7 @@ import json
 import os
 from datetime import date
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from dotenv import load_dotenv
 from pydantic import ValidationError
@@ -31,6 +31,7 @@ def analyze_candidate(
     linkedin_text: Optional[str] = None,
     github_url: Optional[str] = None,
     recruiter_notes: Optional[str] = None,
+    extracted_links: Optional[List[str]] = None,
 ) -> CandidateReport:
     load_dotenv(BASE_DIR / ".env")
     api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
@@ -60,6 +61,7 @@ def analyze_candidate(
         "target_role": target_role,
         "linkedin_or_profile_text": linkedin_text or "",
         "github_or_portfolio_url": github_url or "",
+        "embedded_resume_links": extracted_links or [],
         "recruiter_notes": recruiter_notes or "",
         "resume_text": resume_text,
     }
