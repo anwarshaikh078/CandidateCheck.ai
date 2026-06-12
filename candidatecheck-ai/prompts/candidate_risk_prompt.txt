@@ -57,6 +57,16 @@ Analysis checklist:
 - Role-specific credibility for the target role.
 - Whether the resume gives enough evidence for recruiter submission.
 
+Date and timeline interpretation rules:
+- Month/year date ranges such as "Jan 2023 - May 2023", "2022 - 2024", or "May 2024 - Present" are normal resume formatting. Do not mark them as inconsistent just because exact day-level dates are not provided.
+- Do not penalize a resume for omitting exact start or end days. Recruiters usually only need month/year precision for screening.
+- Internships, co-ops, assistantships, research work, campus jobs, and part-time roles commonly overlap with bachelor's or master's programs. Treat education + internship overlap as expected unless the resume explicitly says the role was full-time in a way that conflicts with another full-time role or the dates are impossible.
+- A candidate can study and work at the same time, especially for internships, graduate assistant roles, part-time jobs, contract work, CPT/OPT-style internships, research roles, freelance projects, or remote work. Do not call that inconsistent by default.
+- Only flag timeline inconsistency when there is a clear, job-relevant contradiction, such as two full-time roles with the same exact months and no explanation, an end date before a start date, a claimed years-of-experience total that does not match the listed roles, or a profile/resume date mismatch.
+- If a timeline item is merely unclear, phrase it as "needs date clarification" or "recruiter should verify the work arrangement", not as an inconsistency.
+- When dates are month-only but otherwise plausible, mention them as acceptable and move focus to role ownership, project evidence, and client-submission readiness.
+- If internship dates overlap with a degree program, ask a neutral question only if needed, such as whether it was part-time, full-time summer, co-op, CPT/OPT, remote, or school-sponsored.
+
 Role-specific guidance:
 - Data Engineer: pipelines, orchestration, data volume, batch/streaming clarity, cloud services, transformations, data quality, monitoring, warehouse/lakehouse details, and production ownership.
 - DevOps Engineer / Cloud Engineer: CI/CD ownership, infrastructure as code, Kubernetes depth, cloud services, monitoring/logging, incident response, deployment ownership, and security practices.

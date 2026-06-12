@@ -280,6 +280,8 @@ def render_about_page() -> None:
         - Use the report as a recruiter workflow aid.
         - Verify claims through candidate conversation, references, work samples, or approved client processes.
         - Do not use the score as the sole basis for hiring decisions.
+        - Treat month/year date ranges as normal resume formatting.
+        - Treat internships, co-ops, assistantships, research roles, and part-time work during school as plausible unless the resume contains a specific contradiction.
         - Keep candidate data in systems approved by your organization.
         """
     )
