@@ -1,19 +1,20 @@
 # CandidateCheck AI
 
-CandidateCheck AI is a Streamlit MVP for technical resume verification support. It helps recruiters identify verification risk, missing information, weak technical proof, timeline issues, profile inconsistencies, and specific validation questions before moving a candidate forward.
+CandidateCheck AI is a Streamlit MVP for evidence-based candidate submission readiness. It helps recruiters identify which resume claims are supported, which claims need verification, how profile assets relate to resume claims, and what questions to ask before client submission.
 
 This app is intentionally not a production SaaS. It uses local SQLite storage and a single Streamlit interface.
 
 ## Features
 
 - Upload PDF or DOCX resumes.
-- Enter target role, profile text, portfolio URL, and recruiter notes.
+- Enter target role, optional job description, profile text, portfolio URL/summary, and recruiter notes.
 - Extract resume text with PyMuPDF or python-docx.
+- Extract embedded PDF/DOCX hyperlinks such as LinkedIn, GitHub, and portfolio URLs.
 - Analyze candidate materials with the OpenAI API.
 - Validate structured JSON reports with Pydantic.
 - Save reports locally in SQLite.
 - Review past reports inside the app.
-- Generate recruiter-ready verification questions grouped by category.
+- Generate claim evidence tables, profile evidence match, role fit gaps, client submission brief, and recruiter-ready verification questions grouped by category.
 
 ## Setup
 

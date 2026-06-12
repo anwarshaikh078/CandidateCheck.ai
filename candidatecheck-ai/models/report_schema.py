@@ -16,9 +16,10 @@ BANNED_LANGUAGE = (
     "definitely " + "ai generated",
     "reject " + "because ai",
     "reject this candidate " + "because of ai",
-    "scam",
+    "sc" + "am",
     "liar",
-    "dishonest",
+    "dish" + "onest",
+    "fabri" + "cated",
 )
 
 LANGUAGE_REPLACEMENTS = (
@@ -28,22 +29,30 @@ LANGUAGE_REPLACEMENTS = (
     ("definitely " + "ai generated", "low-specificity writing"),
     ("reject " + "because ai", "verify writing and experience claims before deciding"),
     ("reject this candidate " + "because of ai", "verify writing and experience claims before deciding"),
-    ("scam", "verification concern"),
+    ("sc" + "am", "verification concern"),
     ("liar", "candidate"),
-    ("dishonest", "unclear"),
+    ("dish" + "onest", "unclear"),
+    ("fabri" + "cated", "not supported by enough evidence"),
 )
 
 
-class RiskLevel(str, Enum):
+class PriorityLevel(str, Enum):
     LOW = "Low"
     MEDIUM = "Medium"
     HIGH = "High"
 
 
-class RecommendedNextStep(str, Enum):
+class Recommendation(str, Enum):
     PROCEED = "Proceed"
     VERIFY_FIRST = "Verify first"
     HOLD_REJECT = "Hold/reject"
+
+
+class EvidenceStrength(str, Enum):
+    STRONG = "Strong"
+    MEDIUM = "Medium"
+    WEAK = "Weak"
+    NOT_ENOUGH = "Not enough evidence"
 
 
 class QuestionCategory(str, Enum):
@@ -51,40 +60,60 @@ class QuestionCategory(str, Enum):
     ROLE_SPECIFIC = "Role-specific technical"
     RED_FLAG = "Resume red-flag follow-up"
     CLIENT_READINESS = "Client-submission readiness"
+    PROFILE_EVIDENCE = "Profile evidence follow-up"
 
 
-class RedFlag(BaseModel):
-    title: str = Field(..., min_length=1)
-    severity: RiskLevel
+class ClientSubmissionRisk(BaseModel):
+    level: PriorityLevel
     explanation: str = Field(..., min_length=1)
 
 
-class VerificationQuestion(BaseModel):
+class ProfileEvidenceMatch(BaseModel):
+    profile_assets_found: List[str] = Field(default_factory=list)
+    external_evidence_summary: str = Field(..., min_length=1)
+    supported_claims: List[str] = Field(default_factory=list)
+    unsupported_or_weak_claims: List[str] = Field(default_factory=list)
+    profile_gaps: List[str] = Field(default_factory=list)
+    recruiter_follow_up: List[str] = Field(default_factory=list)
+
+
+class ExtractedClaim(BaseModel):
+    claim_type: str = Field(..., min_length=1)
+    claim: str = Field(..., min_length=1)
+    resume_evidence: str = Field(..., min_length=1)
+    external_evidence: str = Field(..., min_length=1)
+    evidence_strength: EvidenceStrength
+    why_it_matters: str = Field(..., min_length=1)
+    what_to_verify: str = Field(..., min_length=1)
+
+
+class RoleFitGap(BaseModel):
+    gap: str = Field(..., min_length=1)
+    importance: PriorityLevel
+    explanation: str = Field(..., min_length=1)
+
+
+class RecruiterQuestion(BaseModel):
     category: QuestionCategory
     question: str = Field(..., min_length=1)
-    purpose: str = Field(..., min_length=1)
-    related_signal: str = Field(..., min_length=1)
-    expected_good_answer: str = Field(..., min_length=1)
+    why_ask_this: str = Field(..., min_length=1)
+    related_claim: str = Field(..., min_length=1)
+    good_answer_should_include: str = Field(..., min_length=1)
+    weak_answer_signals: str = Field(..., min_length=1)
 
 
 class CandidateReport(BaseModel):
-    risk_score: int = Field(..., ge=0, le=100)
-    risk_level: RiskLevel
-    recommended_next_step: RecommendedNextStep
-    summary: str = Field(..., min_length=1)
-    profile_assets_found: List[str] = Field(default_factory=list)
-    candidate_evidence_snapshot: List[str] = Field(default_factory=list)
-    key_claims_to_validate: List[str] = Field(default_factory=list)
-    client_submission_brief: List[str] = Field(default_factory=list)
-    top_recruiter_actions: List[str] = Field(default_factory=list)
-    red_flags: List[RedFlag] = Field(default_factory=list)
-    missing_information: List[str] = Field(default_factory=list)
-    resume_quality_signals: List[str] = Field(default_factory=list)
-    ai_generic_writing_signals: List[str] = Field(default_factory=list)
-    timeline_consistency: str = Field(..., min_length=1)
-    skills_credibility: str = Field(..., min_length=1)
-    linkedin_consistency: str = Field(..., min_length=1)
-    verification_questions: List[VerificationQuestion] = Field(default_factory=list)
+    verification_priority_score: int = Field(..., ge=0, le=100)
+    verification_priority_level: PriorityLevel
+    recommendation: Recommendation
+    one_paragraph_summary: str = Field(..., min_length=1)
+    top_3_verification_priorities: List[str] = Field(default_factory=list)
+    client_submission_risk: ClientSubmissionRisk
+    profile_evidence_match: ProfileEvidenceMatch
+    extracted_claims: List[ExtractedClaim] = Field(default_factory=list)
+    role_fit_gaps: List[RoleFitGap] = Field(default_factory=list)
+    recruiter_questions: List[RecruiterQuestion] = Field(default_factory=list)
+    client_submission_brief: str = Field(..., min_length=1)
     disclaimer: str = REPORT_DISCLAIMER
 
     @model_validator(mode="before")
@@ -92,19 +121,19 @@ class CandidateReport(BaseModel):
     def sanitize_product_language(cls, data):
         return sanitize_report_language(data)
 
-    @field_validator("risk_score", mode="before")
+    @field_validator("verification_priority_score", mode="before")
     @classmethod
-    def normalize_risk_score(cls, risk_score):
-        if isinstance(risk_score, float):
-            return round(risk_score)
-        return risk_score
+    def normalize_score(cls, score):
+        if isinstance(score, float):
+            return round(score)
+        return score
 
-    @field_validator("risk_level")
+    @field_validator("verification_priority_level")
     @classmethod
-    def risk_level_matches_score(cls, risk_level: RiskLevel, info):
-        score = info.data.get("risk_score")
+    def level_matches_score(cls, level: PriorityLevel, info):
+        score = info.data.get("verification_priority_score")
         if score is None:
-            return risk_level
+            return level
         return score_to_level(score)
 
     @field_validator("disclaimer")
@@ -114,18 +143,18 @@ class CandidateReport(BaseModel):
 
     @model_validator(mode="after")
     def normalize_and_check_report(self):
-        self.risk_level = score_to_level(self.risk_score)
+        self.verification_priority_level = score_to_level(self.verification_priority_score)
         self.disclaimer = REPORT_DISCLAIMER
         _reject_banned_language(self.model_dump(mode="json"))
         return self
 
 
-def score_to_level(score: int) -> RiskLevel:
+def score_to_level(score: int) -> PriorityLevel:
     if score <= 30:
-        return RiskLevel.LOW
+        return PriorityLevel.LOW
     if score <= 65:
-        return RiskLevel.MEDIUM
-    return RiskLevel.HIGH
+        return PriorityLevel.MEDIUM
+    return PriorityLevel.HIGH
 
 
 def _reject_banned_language(value: Any) -> None:

@@ -17,6 +17,7 @@ from services.extract_text import ResumeExtractionError, extract_resume_links, e
 
 
 APP_TITLE = "CandidateCheck AI"
+PRODUCT_POSITIONING = "Candidate Submission Readiness Checker"
 TARGET_ROLES = [
     "Data Engineer",
     "DevOps Engineer",
@@ -41,7 +42,7 @@ def main() -> None:
         return
 
     st.title(APP_TITLE)
-    st.caption("Technical resume screening for verification risk and recruiter follow-up.")
+    st.caption(PRODUCT_POSITIONING)
 
     analyze_tab, reports_tab, about_tab = st.tabs(
         ["Analyze Resume", "Past Reports", "About / Disclaimer"]
@@ -56,7 +57,7 @@ def main() -> None:
 
 
 def render_analyze_page() -> None:
-    st.subheader("Analyze Resume")
+    st.subheader("Analyze Candidate Submission Readiness")
 
     with st.form("analysis_form"):
         left, right = st.columns([0.95, 1.05])
@@ -64,9 +65,15 @@ def render_analyze_page() -> None:
             candidate_name = st.text_input("Candidate name (optional)")
             target_role = st.selectbox("Target role", [""] + TARGET_ROLES, index=0)
             uploaded_file = st.file_uploader("Resume upload", type=["pdf", "docx"])
+            job_description = st.text_area("Job description (optional)", height=130)
         with right:
             linkedin_text = st.text_area("LinkedIn/profile text (optional)", height=110)
             github_url = st.text_input("GitHub/portfolio URL (optional)")
+            github_portfolio_summary = st.text_area(
+                "GitHub/portfolio summary (optional)",
+                height=90,
+                help="Paste repo/project descriptions, portfolio notes, or profile summaries. The app does not scrape websites.",
+            )
             recruiter_notes = st.text_area("Recruiter notes (optional)", height=90)
 
         submitted = st.form_submit_button("Analyze Candidate", type="primary")
@@ -105,8 +112,10 @@ def render_analyze_page() -> None:
                 resume_text=resume_text,
                 target_role=target_role,
                 candidate_name=candidate_name,
+                job_description=job_description,
                 linkedin_text=linkedin_text,
                 github_url=github_url,
+                github_portfolio_summary=github_portfolio_summary,
                 recruiter_notes=recruiter_notes,
                 extracted_links=extracted_links,
             )
@@ -149,65 +158,54 @@ def render_report(
         render_resume_metadata(resume_meta)
 
     score_col, level_col, step_col = st.columns(3)
-    score_col.metric("Verification Priority Score", report.risk_score)
-    level_col.metric("Verification Priority Level", report.risk_level.value)
-    step_col.metric("Recommended Next Step", report.recommended_next_step.value)
+    step_col.metric("Submission Recommendation", report.recommendation.value)
+    score_col.metric("Verification Priority Score", report.verification_priority_score)
+    level_col.metric("Verification Priority Level", report.verification_priority_level.value)
 
-    st.markdown(f"**Summary**  \n{report.summary}")
+    priority_col, risk_col, profile_col = st.columns(3)
+    with priority_col:
+        st.markdown("#### Top 3 Verification Priorities")
+        render_bullet_list(report.top_3_verification_priorities[:3])
+    with risk_col:
+        st.markdown("#### Client Submission Risk")
+        st.markdown(f"**{report.client_submission_risk.level.value}**")
+        st.write(report.client_submission_risk.explanation)
+    with profile_col:
+        st.markdown("#### Profile Evidence Match")
+        st.write(report.profile_evidence_match.external_evidence_summary)
 
-    overview_tab, questions_tab, signals_tab, details_tab = st.tabs(
-        ["Actions", "Questions", "Signals", "Details"]
+    st.markdown("#### Questions to Ask")
+    render_question_preview(report)
+
+    st.markdown(f"**Summary**  \n{report.one_paragraph_summary}")
+
+    claims_tab, fit_tab, profile_tab, questions_tab, brief_tab = st.tabs(
+        ["Claim Evidence Table", "Role Fit Gaps", "Profile Evidence Match", "Recruiter Questions", "Client Brief"]
     )
 
-    with overview_tab:
-        render_recruiter_brief(report)
-        st.markdown("#### Top Recruiter Actions")
-        render_bullet_list(report.top_recruiter_actions)
+    with claims_tab:
+        render_claim_evidence_table(report)
+
+    with fit_tab:
+        render_role_fit_gaps(report)
+
+    with profile_tab:
+        render_profile_evidence_match(report)
 
     with questions_tab:
         render_questions(report)
 
-    with signals_tab:
-        st.markdown("#### Risk Signals")
-        if report.red_flags:
-            for flag in report.red_flags:
-                st.markdown(
-                    f"<span class='badge {flag.severity.value.lower()}'>{flag.severity.value}</span> "
-                    f"<strong>{flag.title}</strong>",
-                    unsafe_allow_html=True,
-                )
-                st.write(flag.explanation)
-        else:
-            st.write("No major risk signals were identified.")
-
-        signal_col, quality_col, writing_col = st.columns(3)
-        with signal_col:
-            st.markdown("#### Missing Information")
-            render_bullet_list(report.missing_information)
-        with quality_col:
-            st.markdown("#### Resume Quality")
-            render_bullet_list(report.resume_quality_signals)
-        with writing_col:
-            st.markdown("#### Writing Specificity")
-            render_bullet_list(report.ai_generic_writing_signals)
-
-    with details_tab:
-        detail_col_1, detail_col_2, detail_col_3 = st.columns(3)
-        with detail_col_1:
-            st.markdown("#### Timeline")
-            st.write(report.timeline_consistency)
-        with detail_col_2:
-            st.markdown("#### Skills")
-            st.write(report.skills_credibility)
-        with detail_col_3:
-            st.markdown("#### Profile")
-            st.write(report.linkedin_consistency)
+    with brief_tab:
+        st.markdown("#### Client Submission Brief")
+        st.write(report.client_submission_brief)
+        with st.expander("Claims To Validate"):
+            render_bullet_list([claim.what_to_verify for claim in report.extracted_claims])
 
     st.info(report.disclaimer)
 
 
 def render_questions(report: CandidateReport) -> None:
-    questions = [question.model_dump(mode="json") for question in report.verification_questions]
+    questions = [question.model_dump(mode="json") for question in report.recruiter_questions]
     if not questions:
         st.warning("No verification questions were returned.")
         return
@@ -222,23 +220,72 @@ def render_questions(report: CandidateReport) -> None:
                 continue
             for index, item in enumerate(category_questions, start=1):
                 st.markdown(f"**{index}. {item['question']}**")
-                st.caption(f"Related signal: {item['related_signal']}")
-                st.write(f"Purpose: {item['purpose']}")
-                st.write(f"Expected good answer: {item['expected_good_answer']}")
+                st.caption(f"Related claim: {item['related_claim']}")
+                st.write(f"Why ask this: {item['why_ask_this']}")
+                st.write(f"Good answer should include: {item['good_answer_should_include']}")
+                st.write(f"Weak answer signals: {item['weak_answer_signals']}")
 
 
-def render_recruiter_brief(report: CandidateReport) -> None:
-    brief_sections = [
-        ("Profile Assets Found", report.profile_assets_found),
-        ("Evidence Snapshot", report.candidate_evidence_snapshot),
-        ("Claims To Validate", report.key_claims_to_validate),
-        ("Client Submission Brief", report.client_submission_brief),
+def render_question_preview(report: CandidateReport) -> None:
+    for question in report.recruiter_questions[:4]:
+        st.markdown(f"- **{question.category.value}:** {question.question}")
+
+
+def render_claim_evidence_table(report: CandidateReport) -> None:
+    if not report.extracted_claims:
+        st.info("No extracted claims were returned.")
+        return
+    rows = [
+        {
+            "Claim Type": claim.claim_type,
+            "Claim": claim.claim,
+            "Evidence Strength": claim.evidence_strength.value,
+            "Resume Evidence": claim.resume_evidence,
+            "External/Profile Evidence": claim.external_evidence,
+            "Why It Matters": claim.why_it_matters,
+            "Recruiter Should Verify": claim.what_to_verify,
+        }
+        for claim in report.extracted_claims
     ]
-    cols = st.columns(2)
-    for index, (title, items) in enumerate(brief_sections):
-        with cols[index % 2]:
-            st.markdown(f"#### {title}")
-            render_bullet_list(items)
+    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+
+def render_role_fit_gaps(report: CandidateReport) -> None:
+    if not report.role_fit_gaps:
+        st.success("No major role fit gaps were returned.")
+        return
+    for gap in report.role_fit_gaps:
+        st.markdown(
+            f"<span class='badge {gap.importance.value.lower()}'>{gap.importance.value}</span> "
+            f"<strong>{gap.gap}</strong>",
+            unsafe_allow_html=True,
+        )
+        st.write(gap.explanation)
+
+
+def render_profile_evidence_match(report: CandidateReport) -> None:
+    profile = report.profile_evidence_match
+    top_left, top_right = st.columns(2)
+    with top_left:
+        st.markdown("#### Profile Assets Found")
+        render_bullet_list(profile.profile_assets_found)
+    with top_right:
+        st.markdown("#### External Evidence Summary")
+        st.write(profile.external_evidence_summary)
+
+    supported_col, weak_col = st.columns(2)
+    with supported_col:
+        st.markdown("#### Supported Claims")
+        render_bullet_list(profile.supported_claims)
+    with weak_col:
+        st.markdown("#### Unsupported or Weak Claims")
+        render_bullet_list(profile.unsupported_or_weak_claims)
+
+    with st.expander("Profile Gaps and Follow-Up"):
+        st.markdown("##### Profile Gaps")
+        render_bullet_list(profile.profile_gaps)
+        st.markdown("##### Recruiter Follow-Up")
+        render_bullet_list(profile.recruiter_follow_up)
 
 
 def render_past_reports_page() -> None:

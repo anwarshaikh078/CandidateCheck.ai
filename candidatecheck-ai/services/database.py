@@ -62,9 +62,9 @@ def save_report(
             (
                 candidate_name or "",
                 target_role,
-                report.risk_score,
-                report.risk_level.value,
-                report.recommended_next_step.value,
+                report.verification_priority_score,
+                report.verification_priority_level.value,
+                report.recommendation.value,
                 datetime.now(timezone.utc).isoformat(),
                 json.dumps(payload),
             ),
