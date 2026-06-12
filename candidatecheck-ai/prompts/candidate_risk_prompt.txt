@@ -37,8 +37,13 @@ Important link handling:
 - If a link exists but no profile content or portfolio summary is provided, do not say the asset is missing. Say the link was found, but external/profile content was not available for analysis.
 - If profile text or portfolio summary is provided, compare it against resume claims.
 
-Step 1: Extract candidate claims
-Extract specific claims from the resume:
+Required analysis process:
+Complete the following steps in order before writing the final JSON. Do not skip directly to scoring. The final JSON must reflect this process.
+
+Step 1: Extract candidate claims first
+Extract specific, candidate-provided claims from the resume_text before judging the candidate package. Prefer concrete claims over broad summaries.
+
+Extract claims such as:
 - technical skills claimed
 - tools/platforms claimed
 - projects claimed
@@ -51,7 +56,15 @@ Extract specific claims from the resume:
 - certifications
 - cloud/platform claims
 
-Step 2: Evaluate evidence strength
+Rules for extracted_claims:
+- Include the most submission-relevant claims, not every keyword.
+- Include at least 8 claims when enough resume text is available.
+- Each extracted_claims item must quote or paraphrase the actual resume evidence that supports the claim.
+- Do not create claims that are not present in the supplied resume/profile/portfolio text.
+- Separate skills that are only listed in a skills section from skills supported by project/work bullets.
+- If a claim appears important for the target role or job description but is unsupported, include it with Weak or Not enough evidence.
+
+Step 2: Evaluate evidence strength claim-by-claim
 For each important claim, evaluate:
 - claim
 - resume evidence
@@ -62,14 +75,30 @@ For each important claim, evaluate:
 
 Evidence rules:
 - If a skill appears only in a skills section but is not supported by project/work bullets, mark it Weak.
+- If a tool/platform is claimed in a project with implementation detail, mark it Medium or Strong depending on ownership, scale, and outcome detail.
+- If a claim includes production ownership, deployment, monitoring, incident response, performance improvement, measurable impact, or client-facing delivery, explain that in resume_evidence.
 - Strong means the resume gives concrete context such as project, employer/client, implementation detail, measurable outcome, production ownership, or profile evidence.
 - Medium means the claim has some context but lacks depth, ownership, scale, or measurable outcome.
 - Weak means the claim is listed but thinly supported.
 - Not enough evidence means the claim cannot be assessed from the supplied text.
 - Do not treat candidate-provided claims as externally verified unless supporting profile text or portfolio summary is provided.
+- external_evidence must say one of:
+  - "Profile content supports this claim: ..."
+  - "Portfolio/GitHub summary supports this claim: ..."
+  - "Profile asset link found, but content was not provided for analysis."
+  - "No external/profile evidence provided."
 
 Step 3: Role/job fit analysis
-Compare the resume against the selected target role and optional job description.
+Compare the extracted claims against the selected target role and optional job_description.
+
+If job_description is provided:
+- Identify which JD requirements are directly supported by extracted_claims.
+- Identify which JD requirements are weakly supported or missing.
+- role_fit_gaps must focus on JD/target-role requirements that matter for client submission.
+
+If job_description is not provided:
+- Compare against the target role expectations below.
+- Make it clear that the analysis is based on target-role norms, not a client-specific JD.
 
 For Data Engineer:
 Check sources/destinations, orchestration, batch/streaming clarity, data volume, transformations, data quality checks, warehouse/lakehouse, cloud services, monitoring/failure handling, production ownership, and business impact.
@@ -92,6 +121,32 @@ Check SQL depth, dashboards, KPIs, stakeholder work, data sources, business outc
 Step 4: Profile Evidence Match
 Evaluate whether profile assets support resume claims. Do not only show links. Explain what can and cannot be assessed from supplied profile evidence.
 
+Profile Evidence Match rules:
+- profile_assets_found must include embedded_resume_links plus manually supplied github_or_portfolio_url when present.
+- external_evidence_summary must say whether profile content was actually supplied or only links were found.
+- supported_claims must include only claims supported by supplied linkedin_or_profile_text or github_or_portfolio_summary. Do not list a claim as supported merely because a link exists.
+- unsupported_or_weak_claims must include important resume claims that lack profile/portfolio support or remain weak after comparison.
+- profile_gaps should describe missing profile content, stale profile details, missing repo/project descriptions, or claims that cannot be checked from supplied external evidence.
+- recruiter_follow_up should tell the recruiter exactly what to inspect or ask for, such as a repo, project demo, LinkedIn role match, portfolio project, or work sample.
+
+Step 5: Generate recruiter questions tied to claims
+Generate 8 to 12 exact recruiter questions tied to extracted claims and weak evidence.
+
+Question rules:
+- Every recruiter_questions item must map to a real extracted_claims claim using related_claim.
+- Do not generate generic interview questions.
+- Prioritize questions for Weak and Not enough evidence claims.
+- Include at least one Profile evidence follow-up question if profile links are found or profile/portfolio text is provided.
+- Include at least one Client-submission readiness question focused on what can be safely represented to a client.
+- good_answer_should_include must describe concrete evidence a recruiter can listen for.
+- weak_answer_signals must describe vague or insufficient answer patterns.
+
+Step 6: Write final recruiter report
+The final report must be short, practical, and decision-focused:
+- one_paragraph_summary should explain readiness, strongest evidence, and top verification concern.
+- top_3_verification_priorities should be the three most important items to verify before client submission.
+- client_submission_brief should be a concise recruiter-facing submission note draft, with careful wording and no unsupported certainty.
+
 Date and timeline rules:
 - Use analysis_current_date as today's date.
 - "Present" means the candidate is currently working in that role as of analysis_current_date.
@@ -111,16 +166,6 @@ Recommendation rules:
 - Proceed: enough evidence for normal screening and client submission after ordinary recruiter checks.
 - Verify first: useful candidate, but key claims need validation before client submission.
 - Hold/reject: severe client-submission readiness concerns or major unsupported role-fit claims. Phrase this as workflow guidance, not judgment.
-
-Question requirements:
-Generate 8 to 12 exact recruiter questions tied to extracted claims and weak evidence.
-Each question must include:
-- category
-- question
-- why_ask_this
-- related_claim
-- good_answer_should_include
-- weak_answer_signals
 
 Question categories:
 - General verification
