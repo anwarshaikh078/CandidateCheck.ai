@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
@@ -50,6 +51,11 @@ def analyze_candidate(
     model = (os.getenv("OPENAI_MODEL") or DEFAULT_MODEL).strip()
 
     user_payload = {
+        "analysis_current_date": date.today().isoformat(),
+        "date_interpretation_reminder": (
+            "Treat Present as active through analysis_current_date. Month/year ranges are normal. "
+            "Internship, co-op, assistantship, research, part-time, and school-sponsored roles can overlap with education."
+        ),
         "candidate_name": candidate_name or "",
         "target_role": target_role,
         "linkedin_or_profile_text": linkedin_text or "",
